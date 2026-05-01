@@ -1,0 +1,18 @@
+# Build output
+/bin/
+/dist/
+/hopnet
+*.test
+*.out
+vendor/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local
+*.log
