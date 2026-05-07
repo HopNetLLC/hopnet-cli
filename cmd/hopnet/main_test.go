@@ -1,6 +1,12 @@
 package main
 
-import "testing"
+import (
+	"sort"
+	"testing"
+
+	cli "github.com/urfave/cli/v2"
+	"github.com/stretchr/testify/require"
+)
 
 func TestVersionDefault(t *testing.T) {
 	if version == "" {
@@ -9,4 +15,38 @@ func TestVersionDefault(t *testing.T) {
 	if commit == "" {
 		t.Error("commit should not be empty")
 	}
+}
+
+func TestCommandTreeMatchesP8Spec(t *testing.T) {
+	app := buildApp()
+	got := commandNames(app.Commands)
+	sort.Strings(got)
+	require.Equal(t, []string{"auth", "bridge", "env", "receipt", "route", "run", "version"}, got)
+
+	auth := findCmd(t, app.Commands, "auth")
+	require.Equal(t, []string{"login"}, commandNames(auth.Subcommands))
+
+	route := findCmd(t, app.Commands, "route")
+	routeSubs := commandNames(route.Subcommands)
+	sort.Strings(routeSubs)
+	require.Equal(t, []string{"create", "delete", "list", "usage"}, routeSubs)
+}
+
+func commandNames(cmds []*cli.Command) []string {
+	out := make([]string, 0, len(cmds))
+	for _, c := range cmds {
+		out = append(out, c.Name)
+	}
+	return out
+}
+
+func findCmd(t *testing.T, cmds []*cli.Command, name string) *cli.Command {
+	t.Helper()
+	for _, c := range cmds {
+		if c.Name == name {
+			return c
+		}
+	}
+	t.Fatalf("command %q not found", name)
+	return nil
 }

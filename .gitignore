@@ -16,3 +16,6 @@ vendor/
 
 # Local
 *.log
+
+# Agent runtime
+/.codex/
