@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -200,9 +201,13 @@ func routeDeleteAction(c *cli.Context) error {
 		return err
 	}
 	apiErr := api.DeleteRoute(c.Context, id)
-	// Best-effort local cleanup regardless of server result.
-	cfg.DeleteRoute(id)
-	_ = cfg.Save()
+	// Only drop the local cache entry when the server confirmed the
+	// revoke (204) or said the route is already gone (404). On any other
+	// error we keep the local token so the user can retry.
+	if apiErr == nil || errors.Is(apiErr, client.ErrNotFound) {
+		cfg.DeleteRoute(id)
+		_ = cfg.Save()
+	}
 	if apiErr != nil {
 		return apiErr
 	}

@@ -239,6 +239,45 @@ func TestProxyURLForRouteEscapesUserInfo(t *testing.T) {
 	require.Equal(t, "proxy.hopnet.io:443", u.Host)
 }
 
+func TestRunRevokesSelfCreatedRouteOnPreExecError(t *testing.T) {
+	srv := newFakeServer(t)
+	cfg := newCfg(t, "://invalid-proxy-url")
+	c := client.New(srv.srv.URL, "hn_live_xxxxxxxx")
+
+	res, err := Run(context.Background(), c, cfg, Options{
+		CreateRequest: &client.CreateRouteRequest{TTLSeconds: 60, RouteClass: "direct", ClientKind: "cli"},
+		Argv:          []string{"/usr/bin/true"},
+		Stdout:        &bytes.Buffer{},
+		Stderr:        &bytes.Buffer{},
+		Env:           []string{"PATH=/usr/bin:/bin"},
+	})
+	require.Error(t, err, "proxyURLForRoute should fail on invalid scheme")
+	require.True(t, res.Created, "route was created before the error")
+	require.Equal(t, 1, srv.createCalls)
+	require.Equal(t, 1, srv.deleteCalls,
+		"self-created route must be revoked when exec never starts")
+	_, ok := cfg.GetRoute(res.RouteID)
+	require.False(t, ok, "route must be removed from local cache too")
+}
+
+func TestRunPreExecErrorPreservedWhenKeepRouteSet(t *testing.T) {
+	srv := newFakeServer(t)
+	cfg := newCfg(t, "://invalid-proxy-url")
+	c := client.New(srv.srv.URL, "hn_live_xxxxxxxx")
+
+	_, err := Run(context.Background(), c, cfg, Options{
+		CreateRequest: &client.CreateRouteRequest{TTLSeconds: 60, RouteClass: "direct", ClientKind: "cli"},
+		Argv:          []string{"/usr/bin/true"},
+		KeepRoute:     true,
+		Stdout:        &bytes.Buffer{},
+		Stderr:        &bytes.Buffer{},
+		Env:           []string{"PATH=/usr/bin:/bin"},
+	})
+	require.Error(t, err)
+	require.Equal(t, 0, srv.deleteCalls,
+		"--keep-route opts out of revoke even on pre-exec error")
+}
+
 func TestBuildEnvDropsCallerProxyVars(t *testing.T) {
 	parent := []string{
 		"PATH=/usr/bin:/bin",

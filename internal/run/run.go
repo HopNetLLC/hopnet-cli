@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -174,13 +175,34 @@ func Run(ctx context.Context, c *client.Client, cfg *config.Config, opts Options
 		}
 	}
 
+	// Track whether we've started the child. Until exec begins, any
+	// error path that affects a self-created route must trigger a
+	// best-effort revoke so we don't leak a billable route on a setup
+	// failure (e.g. proxyURLForRoute below).
+	execStarted := false
+	defer func() {
+		if execStarted || !res.Created || opts.KeepRoute {
+			return
+		}
+		revokeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := c.DeleteRoute(revokeCtx, res.RouteID); err != nil &&
+			!errors.Is(err, client.ErrNotFound) {
+			res.RevokeErr = err
+		} else {
+			cfg.DeleteRoute(res.RouteID)
+			_ = cfg.Save()
+		}
+	}()
+
 	proxyURL, err := proxyURLForRoute(cfg.ProxyURL, res.RouteID, res.Token)
 	if err != nil {
 		return res, err
 	}
 
 	// Exec the child.
-	res.ExitCode = execChild(ctx, opts, buildEnv(opts.Env, proxyURL, res.RouteID, res.Token))
+	execStarted = true
+	res.ExitCode = execChild(opts, buildEnv(opts.Env, proxyURL, res.RouteID, res.Token))
 
 	// Revoke unless we're explicitly keeping the route AND we created it.
 	// If the user supplied --route, the route belongs to them; we never
@@ -190,7 +212,8 @@ func Run(ctx context.Context, c *client.Client, cfg *config.Config, opts Options
 		// still revoke when the parent ctx was cancelled by SIGINT.
 		revokeCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		if err := c.DeleteRoute(revokeCtx, res.RouteID); err != nil {
+		if err := c.DeleteRoute(revokeCtx, res.RouteID); err != nil &&
+			!errors.Is(err, client.ErrNotFound) {
 			res.RevokeErr = err
 		} else {
 			cfg.DeleteRoute(res.RouteID)
@@ -212,17 +235,23 @@ func Run(ctx context.Context, c *client.Client, cfg *config.Config, opts Options
 // execChild starts the child with the supplied env, forwards signals, and
 // returns the exit code. If the child is killed by a signal, the
 // returned code is 128+signum (Unix convention).
-func execChild(ctx context.Context, opts Options, env []string) int {
-	cmd := exec.CommandContext(ctx, opts.Argv[0], opts.Argv[1:]...)
+//
+// Note: exec.Command is used here, NOT exec.CommandContext. The parent's
+// ctx is canceled by SIGINT (signal.NotifyContext in main), and Go's
+// CommandContext default-kills the child with SIGKILL on cancel — which
+// would race with our explicit forwarder and produce exit 137 instead
+// of 128+SIGINT. We drive child termination only through the explicit
+// signal forwarder below.
+func execChild(opts Options, env []string) int {
+	cmd := exec.Command(opts.Argv[0], opts.Argv[1:]...)
 	cmd.Stdin = opts.Stdin
 	cmd.Stdout = opts.Stdout
 	cmd.Stderr = opts.Stderr
 	cmd.Env = env
 
-	// Put the child in its own process group so SIGINT to the terminal
-	// (which goes to the foreground PG) hits both us and the child;
-	// our handler then forwards explicitly to make sure the child
-	// noticed.
+	// Put the child in its own process group so the terminal's SIGINT
+	// (delivered to our PG only) doesn't double-hit the child; we
+	// forward it explicitly below so the child's whole subtree sees it.
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
@@ -233,28 +262,44 @@ func execChild(ctx context.Context, opts Options, env []string) int {
 		return 127
 	}
 
-	// Forward SIGINT/SIGTERM. Second signal escalates to SIGKILL.
+	// Forward SIGINT/SIGTERM/SIGHUP. Second signal escalates to SIGKILL.
 	sigCh := make(chan os.Signal, 2)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer signal.Stop(sigCh)
 
+	// `exited` is set BEFORE doneCh receives so the signal handler can
+	// short-circuit kills against a freshly-reaped PID/PGID. The race
+	// window between `cmd.Wait()` returning and `exited.Store(true)` is
+	// a few CPU instructions; far smaller than the unguarded window.
+	var exited atomic.Bool
 	doneCh := make(chan error, 1)
-	go func() { doneCh <- cmd.Wait() }()
+	go func() {
+		err := cmd.Wait()
+		exited.Store(true)
+		doneCh <- err
+	}()
 
 	signalsReceived := 0
 	for {
 		select {
 		case sig := <-sigCh:
+			if exited.Load() {
+				continue
+			}
 			signalsReceived++
 			if signalsReceived >= 2 {
-				_ = cmd.Process.Kill()
+				if !exited.Load() {
+					_ = cmd.Process.Kill()
+				}
 				continue
 			}
 			// Forward via process group so child + descendants see it.
+			// Re-check `exited` between Getpgid and Kill to keep the
+			// PID-reuse window as small as possible.
 			pgid, err := syscall.Getpgid(cmd.Process.Pid)
-			if err == nil {
+			if err == nil && !exited.Load() {
 				_ = syscall.Kill(-pgid, sig.(syscall.Signal))
-			} else {
+			} else if err != nil && !exited.Load() {
 				_ = cmd.Process.Signal(sig)
 			}
 		case err := <-doneCh:

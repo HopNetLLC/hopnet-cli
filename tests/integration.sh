@@ -83,9 +83,19 @@ seed_resp_code=$(curl -sS -o /tmp/cli-int-seed.out -w '%{http_code}' \
   -H "X-Admin-Token: $ADMIN_TOK" -H "Content-Type: application/json" \
   -d '{"name":"direct","adapter_type":"direct","route_class":"direct","country":"*","cost_per_gb_cents":0,"priority":1}' || true)
 case "$seed_resp_code" in
-  201|409) echo "  direct upstream: $seed_resp_code" ;;
-  *) echo "FAIL: seed direct upstream returned $seed_resp_code" >&2
-     cat /tmp/cli-int-seed.out >&2; exit 1 ;;
+  201|409)
+    echo "  direct upstream: $seed_resp_code" ;;
+  500)
+    # Duplicate-name 23505 surfaces as 500 today; treat as already-seeded.
+    if grep -q '23505' /tmp/cli-int-seed.out; then
+      echo "  direct upstream: 500 (duplicate, already seeded)"
+    else
+      echo "FAIL: seed direct upstream returned 500" >&2
+      cat /tmp/cli-int-seed.out >&2; exit 1
+    fi ;;
+  *)
+    echo "FAIL: seed direct upstream returned $seed_resp_code" >&2
+    cat /tmp/cli-int-seed.out >&2; exit 1 ;;
 esac
 
 echo "==> mint account + api key + credit"
