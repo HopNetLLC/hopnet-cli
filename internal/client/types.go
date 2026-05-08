@@ -105,3 +105,44 @@ type errorBody struct {
 	Error        string `json:"error"`
 	BalanceCents *int64 `json:"balance_cents,omitempty"`
 }
+
+// CheckoutRequest is the body for POST /v1/billing/checkout (P9).
+type CheckoutRequest struct {
+	AmountUSD int `json:"amount_usd"`
+}
+
+// CheckoutResponse is the 200 body from POST /v1/billing/checkout. ExpiresAt
+// is server-side ISO8601; absent for sessions without an expiry.
+type CheckoutResponse struct {
+	SessionID   string     `json:"session_id"`
+	CheckoutURL string     `json:"checkout_url"`
+	ExpiresAt   *time.Time `json:"expires_at"`
+}
+
+// LedgerRow is one entry in the credit_ledger view exposed via
+// /v1/account/billing and /v1/account/billing/history (P9).
+type LedgerRow struct {
+	ID                 string    `json:"id"`
+	Type               string    `json:"type"`
+	AmountCents        int64     `json:"amount_cents"`
+	RouteID            *string   `json:"route_id"`
+	UpstreamEndpointID *string   `json:"upstream_endpoint_id"`
+	CreatedAt          time.Time `json:"created_at"`
+}
+
+// BillingResponse is GET /v1/account/billing. Recent is capped at 5 rows.
+type BillingResponse struct {
+	BalanceCents int64       `json:"balance_cents"`
+	BalanceUSD   float64     `json:"balance_usd"`
+	Currency     string      `json:"currency"`
+	Recent       []LedgerRow `json:"recent"`
+}
+
+// BillingHistoryResponse is GET /v1/account/billing/history. NextBefore is
+// the keyset cursor for the next page; null when fewer than `limit` rows
+// were returned.
+type BillingHistoryResponse struct {
+	BalanceCents int64       `json:"balance_cents"`
+	Rows         []LedgerRow `json:"rows"`
+	NextBefore   *string     `json:"next_before"`
+}

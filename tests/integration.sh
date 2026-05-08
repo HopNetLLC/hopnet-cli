@@ -195,5 +195,54 @@ if [[ "${HOPNET_RUN_LIVE:-0}" == "1" ]]; then
     echo "FAIL: receipt not on stderr" >&2; exit 1; }
 fi
 
+echo "==> hopnet billing balance"
+billing_balance_out=$("$HOPNET" billing balance)
+echo "$billing_balance_out" | grep -q "balance:" || {
+  echo "FAIL: billing balance missing balance line" >&2; exit 1; }
+
+echo "==> hopnet billing history --limit 3"
+billing_history_out=$("$HOPNET" billing history --limit 3 || true)
+echo "$billing_history_out" | grep -q "WHEN" || {
+  echo "FAIL: billing history missing header" >&2; exit 1; }
+
+# topup requires BOTH Stripe creds in the sibling alpha stack. The server
+# tightened in P9 review pass 2: POST /v1/billing/checkout returns 503
+# stripe_not_configured unless STRIPE_SECRET_KEY_TEST AND
+# STRIPE_WEBHOOK_SECRET_TEST are both present (otherwise we'd accept payment
+# we can't post). Gate must mirror that check exactly so a half-configured
+# .env produces a clean skip, not a hard failure.
+stripe_test_key=""
+stripe_test_webhook=""
+if [[ -f "$HOPNET_ALPHA_DIR/.env" ]]; then
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" =~ ^[[:space:]]*STRIPE_SECRET_KEY_TEST=(.*)$ ]]; then
+      stripe_test_key="${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ ^[[:space:]]*STRIPE_WEBHOOK_SECRET_TEST=(.*)$ ]]; then
+      stripe_test_webhook="${BASH_REMATCH[1]}"
+    fi
+  done < "$HOPNET_ALPHA_DIR/.env"
+fi
+if [[ -n "$stripe_test_key" && -n "$stripe_test_webhook" ]]; then
+  echo "==> hopnet billing topup --usd 25 --no-open --no-wait (Stripe configured)"
+  topup_out=$("$HOPNET" billing topup --usd 25 --no-open --no-wait)
+  echo "$topup_out" | grep -q "checkout URL: https://" || {
+    echo "FAIL: topup did not print checkout URL" >&2
+    echo "$topup_out" >&2; exit 1; }
+  echo "$topup_out" | grep -q "session: cs_test_" || {
+    echo "FAIL: topup did not print test-mode session id" >&2
+    echo "$topup_out" >&2; exit 1; }
+
+  echo "==> hopnet billing topup --usd 1 (insufficient → exit code != 0)"
+  set +e
+  "$HOPNET" billing topup --usd 1 --no-open --no-wait >/tmp/cli-int-topup-low.out 2>&1
+  topup_low_code=$?
+  set -e
+  [[ "$topup_low_code" -ne 0 ]] || {
+    echo "FAIL: topup --usd 1 should have failed (server returns 400)" >&2
+    cat /tmp/cli-int-topup-low.out >&2; exit 1; }
+else
+  echo "==> hopnet billing topup: SKIPPED (STRIPE_SECRET_KEY_TEST + STRIPE_WEBHOOK_SECRET_TEST must both be set in $HOPNET_ALPHA_DIR/.env)"
+fi
+
 echo
 echo "OK — all CLI integration assertions passed."

@@ -79,6 +79,7 @@ func buildApp() *cli.App {
 			runCmd(),
 			bridgeCmd(),
 			receiptCmd(),
+			billingCmd(),
 		},
 	}
 }
