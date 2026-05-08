@@ -158,8 +158,14 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 		return nil
 	}
 
-	// Error path: read body (cap to 64KiB so we don't OOM on a misbehaving
-	// server) and try to parse the standard {error: ...} shape.
+	return mapErrorResponse(resp)
+}
+
+// mapErrorResponse reads the body of a non-2xx response and produces the
+// matching *APIError. Extracted so request-builder helpers that need
+// header-level customization (e.g. Idempotency-Key) can share the same
+// status-to-sentinel mapping without re-implementing it.
+func mapErrorResponse(resp *http.Response) error {
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 	var eb errorBody
 	_ = json.Unmarshal(raw, &eb)

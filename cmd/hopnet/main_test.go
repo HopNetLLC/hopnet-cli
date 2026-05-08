@@ -17,11 +17,11 @@ func TestVersionDefault(t *testing.T) {
 	}
 }
 
-func TestCommandTreeMatchesP8Spec(t *testing.T) {
+func TestCommandTreeMatchesSpec(t *testing.T) {
 	app := buildApp()
 	got := commandNames(app.Commands)
 	sort.Strings(got)
-	require.Equal(t, []string{"auth", "bridge", "env", "receipt", "route", "run", "version"}, got)
+	require.Equal(t, []string{"auth", "billing", "bridge", "env", "receipt", "route", "run", "version"}, got)
 
 	auth := findCmd(t, app.Commands, "auth")
 	require.Equal(t, []string{"login"}, commandNames(auth.Subcommands))
@@ -30,6 +30,11 @@ func TestCommandTreeMatchesP8Spec(t *testing.T) {
 	routeSubs := commandNames(route.Subcommands)
 	sort.Strings(routeSubs)
 	require.Equal(t, []string{"create", "delete", "list", "usage"}, routeSubs)
+
+	billing := findCmd(t, app.Commands, "billing")
+	billingSubs := commandNames(billing.Subcommands)
+	sort.Strings(billingSubs)
+	require.Equal(t, []string{"balance", "history", "topup"}, billingSubs)
 }
 
 func commandNames(cmds []*cli.Command) []string {
