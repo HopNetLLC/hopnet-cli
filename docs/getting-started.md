@@ -37,14 +37,6 @@ hopnet version
 # hopnet 0.1.2 (...)
 ```
 
-### CI pinning
-
-CI users should pin the version to avoid the unauthenticated GitHub releases API rate limit (60 requests per hour per IP):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | HOPNET_VERSION=v0.1.2 bash
-```
-
 ## 2. Get an API key
 
 1. Sign in at **https://app.hopnet.io** (email magic-link or Google).
@@ -61,10 +53,14 @@ hopnet auth login --api-key hn_live_...
 
 This stores your key (mode 0600) at `$XDG_CONFIG_HOME/hopnet/config.json` (default `~/.config/hopnet/config.json`) and pings `/v1/account` to verify it works. You'll see a confirmation line with your account email + current credit balance.
 
-For 1Password users:
+If you'd rather not put the key in your shell history, `hopnet auth login` accepts the key on stdin or via an interactive no-echo prompt:
 
 ```bash
-op read 'op://Private/HopNet API/key' | hopnet auth login
+# stdin (works with any secret manager)
+your-secret-tool read api-key | hopnet auth login
+
+# interactive — type/paste, no echo
+hopnet auth login
 ```
 
 ## 4. Verify everything is working
