@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # install.sh — one-shot installer for the hopnet CLI.
 #
-# Usage:
-#   curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | sh
+# Usage (note `| bash`, NOT `| sh` — the script uses bash-only options like
+# `set -o pipefail`, and a piped shebang is ignored so /bin/sh would run it):
+#   curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | bash
 #
 # Environment overrides:
 #   HOPNET_VERSION       — install a specific version (e.g. v0.1.1).
