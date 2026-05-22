@@ -55,6 +55,13 @@ brews:
     repository:
       owner: HopNetLLC
       name: homebrew-hopnet
+      # Required: GoReleaser does NOT auto-discover HOMEBREW_TAP_GITHUB_TOKEN.
+      # Without an explicit token template, it falls back to the default
+      # GITHUB_TOKEN (a GitHub App installation token scoped to this repo
+      # only), which gets 403 "Resource not accessible by integration"
+      # when pushing to the tap repo. The PAT lives at release.yml's env
+      # block.
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: https://github.com/HopNetLLC/hopnet-cli
     description: Disposable network routes for agents, CI, browser automation
     license: ''

@@ -26,7 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.s
 
 # Pin a specific version (recommended for CI to avoid the unauthenticated
 # 60/hr/IP GitHub releases API rate limit)
-curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | HOPNET_VERSION=v0.1.1 bash
+curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | HOPNET_VERSION=v0.1.2 bash
 
 # Custom install directory
 curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | HOPNET_INSTALL_DIR=/usr/local/bin bash
