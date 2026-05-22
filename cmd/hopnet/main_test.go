@@ -21,7 +21,7 @@ func TestCommandTreeMatchesSpec(t *testing.T) {
 	app := buildApp()
 	got := commandNames(app.Commands)
 	sort.Strings(got)
-	require.Equal(t, []string{"auth", "billing", "bridge", "env", "receipt", "route", "run", "version"}, got)
+	require.Equal(t, []string{"auth", "billing", "bridge", "completion", "env", "receipt", "route", "run", "version"}, got)
 
 	auth := findCmd(t, app.Commands, "auth")
 	require.Equal(t, []string{"login"}, commandNames(auth.Subcommands))

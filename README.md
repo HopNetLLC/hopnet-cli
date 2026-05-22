@@ -33,6 +33,19 @@ Or build from source:
 go build -o ./bin/hopnet ./cmd/hopnet
 ```
 
+### Shell completion
+
+```bash
+# bash — add to ~/.bashrc
+source <(hopnet completion bash)
+
+# zsh — add to ~/.zshrc
+source <(hopnet completion zsh)
+
+# fish — add to ~/.config/fish/config.fish
+hopnet completion fish | source
+```
+
 ### Use
 
 ```bash

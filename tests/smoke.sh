@@ -149,5 +149,20 @@ for sub in topup balance history; do
     echo "FAIL: billing --help missing: $sub" >&2; exit 1; }
 done
 
+# ---------- Phase 8: completion subcommand emits hopnet-named scripts ----------
+echo "==> hopnet completion {bash,zsh,fish} emits non-empty hopnet-named scripts"
+for shell in bash zsh fish; do
+  out=$("$HOPNET" completion "$shell")
+  [ -n "$out" ] || { echo "FAIL: completion $shell empty" >&2; exit 1; }
+  echo "$out" | grep -q "hopnet" || {
+    echo "FAIL: completion $shell does not reference 'hopnet'" >&2; exit 1; }
+done
+set +e
+"$HOPNET" completion 2>"$TMP"/smoke-completion.err
+comp_code=$?
+set -e
+[ "$comp_code" -ne 0 ] || {
+  echo "FAIL: bare 'completion' returned 0; expected usage error" >&2; exit 1; }
+
 echo
 echo "OK — all hopnet-cli smoke assertions passed."
