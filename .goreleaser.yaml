@@ -49,3 +49,16 @@ changelog:
       - '^docs:'
       - '^test:'
       - '^chore:'
+
+brews:
+  - name: hopnet
+    repository:
+      owner: HopNetLLC
+      name: homebrew-hopnet
+    homepage: https://github.com/HopNetLLC/hopnet-cli
+    description: Disposable network routes for agents, CI, browser automation
+    license: ''
+    install: |
+      bin.install "hopnet"
+    test: |
+      system "#{bin}/hopnet", "version"
