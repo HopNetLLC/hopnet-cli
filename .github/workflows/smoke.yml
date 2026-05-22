@@ -19,7 +19,7 @@ jobs:
     name: built-binary smoke
     # Self-hosted runner — see ci.yml for the rollout rationale.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, self-hosted-hopnet-ci]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
