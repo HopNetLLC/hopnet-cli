@@ -209,6 +209,28 @@ func TestRun_ProxyMissingPort_HTTPSDefaults(t *testing.T) {
 	}
 }
 
+func TestFormatBalance(t *testing.T) {
+	cases := []struct {
+		cents int64
+		want  string
+	}{
+		{0, "$0.00"},
+		{1234, "$12.34"},
+		{100, "$1.00"},
+		// Codex r1 P3 regression: -50 cents must render with a minus
+		// sign. Plain `cents/100` truncates toward zero for small
+		// negatives, dropping the sign.
+		{-50, "-$0.50"},
+		{-1, "-$0.01"},
+		{-1234, "-$12.34"},
+	}
+	for _, tc := range cases {
+		if got := formatBalance(tc.cents); got != tc.want {
+			t.Errorf("formatBalance(%d) = %q, want %q", tc.cents, got, tc.want)
+		}
+	}
+}
+
 func TestAllOK(t *testing.T) {
 	if !AllOK([]Result{{Status: StatusOK}, {Status: StatusOK}}) {
 		t.Fatal("expected true for all OK")

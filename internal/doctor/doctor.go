@@ -14,6 +14,7 @@ import (
 	"github.com/HopNetLLC/hopnet-cli/internal/auth"
 	"github.com/HopNetLLC/hopnet-cli/internal/client"
 	"github.com/HopNetLLC/hopnet-cli/internal/config"
+	"github.com/HopNetLLC/hopnet-cli/internal/redact"
 )
 
 // Status is the outcome of a single check.
@@ -176,15 +177,31 @@ func checkControlAPI(ctx context.Context, cfg *config.Config, mkClient func(*con
 	return Result{
 		Name:   "control-api",
 		Status: StatusOK,
-		Detail: fmt.Sprintf("%s · %s · balance $%d.%02d", cfg.BaseURL, account.Email,
-			account.BalanceCents/100, absInt64(account.BalanceCents)%100),
+		Detail: fmt.Sprintf("%s · %s · balance %s", cfg.BaseURL, account.Email, formatBalance(account.BalanceCents)),
 	}
+}
+
+// formatBalance renders a signed dollar amount. Compute sign + absolute
+// dollars/cents from a single uint64 abs value so balances in (-100, 0)
+// don't lose their sign to integer truncation toward zero.
+func formatBalance(cents int64) string {
+	sign := ""
+	abs := cents
+	if cents < 0 {
+		sign = "-"
+		// Route through uint64 so MinInt64 doesn't wrap on negation.
+		u := uint64(-(cents + 1)) + 1
+		return fmt.Sprintf("%s$%d.%02d", sign, u/100, u%100)
+	}
+	return fmt.Sprintf("$%d.%02d", abs/100, abs%100)
 }
 
 func checkProxy(ctx context.Context, proxyURL string, dial DialFunc, timeout time.Duration) Result {
 	u, err := url.Parse(proxyURL)
 	if err != nil {
-		return Result{Name: "proxy", Status: StatusFail, Detail: fmt.Sprintf("parse proxy_url: %v", err)}
+		// url.Parse errors can echo the input including userinfo; never
+		// surface them in default-verbosity output.
+		return Result{Name: "proxy", Status: StatusFail, Detail: "parse proxy_url failed (run with HOPNET_DEBUG=1 to see redacted detail)"}
 	}
 	host := u.Hostname()
 	port := u.Port()
@@ -197,7 +214,9 @@ func checkProxy(ctx context.Context, proxyURL string, dial DialFunc, timeout tim
 		case "http":
 			port = "80"
 		default:
-			return Result{Name: "proxy", Status: StatusFail, Detail: fmt.Sprintf("no port in proxy_url %q", proxyURL)}
+			// Userinfo can be embedded in proxy_url; redact.URL strips it
+			// before we put the value in operator-visible output.
+			return Result{Name: "proxy", Status: StatusFail, Detail: fmt.Sprintf("no port in proxy_url %s", redact.URL(proxyURL))}
 		}
 	}
 	address := net.JoinHostPort(host, port)
@@ -212,9 +231,3 @@ func checkProxy(ctx context.Context, proxyURL string, dial DialFunc, timeout tim
 	return Result{Name: "proxy", Status: StatusOK, Detail: fmt.Sprintf("tcp %s reachable", address)}
 }
 
-func absInt64(n int64) int64 {
-	if n < 0 {
-		return -n
-	}
-	return n
-}
