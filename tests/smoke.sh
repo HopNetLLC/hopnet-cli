@@ -70,26 +70,26 @@ echo "    config dir mode 700 (ok)"
 # ---------- Phase 3: bad API-key format is rejected pre-network ----------
 echo "==> auth login --api-key short → format-validation error"
 set +e
-"$HOPNET" auth login --skip-verify --api-key short_key 2>/tmp/smoke-badkey.err
+"$HOPNET" auth login --skip-verify --api-key short_key 2>"$TMP"/smoke-badkey.err
 bad_key_code=$?
 set -e
 [[ "$bad_key_code" -ne 0 ]] || {
   echo "FAIL: short api key was accepted (should fail format check)" >&2; exit 1; }
-grep -q "hn_live_" /tmp/smoke-badkey.err || {
+grep -q "hn_live_" "$TMP"/smoke-badkey.err || {
   echo "FAIL: error did not mention required key prefix" >&2
-  cat /tmp/smoke-badkey.err >&2; exit 1; }
+  cat "$TMP"/smoke-badkey.err >&2; exit 1; }
 
 # ---------- Phase 4: hopnet env on uncached route → generic error ----------
 echo "==> hopnet env rt_uncached → exit != 0 (not in local cache)"
 set +e
-"$HOPNET" env rt_nonexistent_route_id 2>/tmp/smoke-env.err
+"$HOPNET" env rt_nonexistent_route_id 2>"$TMP"/smoke-env.err
 env_code=$?
 set -e
 [[ "$env_code" -ne 0 ]] || {
   echo "FAIL: env returned 0 for uncached route" >&2; exit 1; }
-grep -q "local cache" /tmp/smoke-env.err || {
+grep -q "local cache" "$TMP"/smoke-env.err || {
   echo "FAIL: env error did not mention local cache" >&2
-  cat /tmp/smoke-env.err >&2; exit 1; }
+  cat "$TMP"/smoke-env.err >&2; exit 1; }
 
 # ---------- Phase 5: hopnet bridge with cached route → exit 6 ----------
 # Seed the route cache directly so bridge's lookup succeeds and we hit
@@ -112,23 +112,23 @@ with open(p, "w") as f:
 PY
 
 set +e
-"$HOPNET" bridge --route rt_smoke_seed_route --listen 127.0.0.1:0 2>/tmp/smoke-bridge.err
+"$HOPNET" bridge --route rt_smoke_seed_route --listen 127.0.0.1:0 2>"$TMP"/smoke-bridge.err
 bridge_code=$?
 set -e
 [[ "$bridge_code" == "6" ]] || {
   echo "FAIL: bridge returned $bridge_code, expected 6 (not implemented)" >&2
-  cat /tmp/smoke-bridge.err >&2; exit 1; }
+  cat "$TMP"/smoke-bridge.err >&2; exit 1; }
 echo "    bridge exit 6 (ok)"
 
 # ---------- Phase 6: route create against dead endpoint → non-zero ----------
 echo "==> hopnet route create against dead endpoint → exit != 0"
 set +e
-"$HOPNET" route create --ttl 1m --class direct >/tmp/smoke-create.out 2>&1
+"$HOPNET" route create --ttl 1m --class direct >"$TMP"/smoke-create.out 2>&1
 create_code=$?
 set -e
 [[ "$create_code" -ne 0 ]] || {
   echo "FAIL: route create against $DEAD_BASE returned 0" >&2
-  cat /tmp/smoke-create.out >&2; exit 1; }
+  cat "$TMP"/smoke-create.out >&2; exit 1; }
 
 # ---------- Phase 7: subcommands match documented surface ----------
 # Defense in depth against accidental command drop or rename. The unit
