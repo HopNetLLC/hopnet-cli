@@ -104,17 +104,19 @@ That's `<route-id> <route-token> <expires-at>`. Save it — the token is returne
 
 ### Route flags
 
-| Flag | What it does |
-|---|---|
-| `--ttl 15m` | How long the route lives (default 15m, max 24h) |
-| `--max-mb 100` | Hard byte cap; route auto-terminates when hit |
-| `--max-cost-cents 50` | Hard cost cap (in cents) |
-| `--class direct` | Route class: `direct`, `datacenter`, `residential`, `free`, `fast`, `auto` |
-| `--country US` | ISO-3166 country code (depends on the class supporting it) |
-| `--min-mbps 5` | Requested minimum throughput |
-| `--allow example.com` | Destination allowlist (repeatable) |
-| `--deny tracker.com` | Destination denylist (repeatable) |
-| `--label run-123` | Free-form label for your own bookkeeping |
+No flag is strictly required — `hopnet route create` with no arguments produces a 15-minute `direct`-class route with no byte/cost cap and no destination filter.
+
+| Flag | Default | Required | What it does |
+|---|---|---|---|
+| `--ttl 15m` | `15m` | no | How long the route lives (max 24h) |
+| `--max-mb 100` | _(no cap)_ | no | Hard byte cap; route auto-terminates when hit (max 100 GB) |
+| `--max-cost-cents 50` | _(no cap)_ | no | Hard cost cap, in cents |
+| `--class direct` | `direct` | no | Route class: `direct`, `datacenter`, `residential`, `free`, `fast`, `auto` |
+| `--country US` | _(any)_ | no | ISO-3166 country code (depends on the class supporting it) |
+| `--min-mbps 5` | _(unrestricted)_ | no | Requested minimum throughput |
+| `--allow example.com` | _(all hosts allowed)_ | no | Destination allowlist (repeatable; presence enables strict filtering) |
+| `--deny tracker.com` | _(none denied)_ | no | Destination denylist (repeatable) |
+| `--label run-123` | _(empty)_ | no | Free-form label for your own bookkeeping |
 
 ## 6. Use the route
 
