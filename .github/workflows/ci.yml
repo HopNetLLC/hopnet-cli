@@ -16,7 +16,7 @@ jobs:
     # untrusted forks (forks are also disabled at the org level, so this
     # is closed-by-default in practice).
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, self-hosted-hopnet-ci]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -30,7 +30,7 @@ jobs:
     name: Cross-compile (${{ matrix.goos }}/${{ matrix.goarch }})
     # `needs: [go-check]` already gates fork PRs; matrix jobs inherit
     # the gate transitively (skipped go-check skips dependents).
-    runs-on: [self-hosted, self-hosted-hopnet-ci]
+    runs-on: ubuntu-latest
     needs: [go-check]
     strategy:
       matrix:
@@ -65,7 +65,7 @@ jobs:
   docker-build:
     name: Docker build (${{ matrix.platforms }})
     # Same `needs: [go-check]` transitive gate as cross-build.
-    runs-on: [self-hosted, self-hosted-hopnet-ci]
+    runs-on: ubuntu-latest
     needs: [go-check]
     strategy:
       matrix:

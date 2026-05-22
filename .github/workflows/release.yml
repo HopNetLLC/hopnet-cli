@@ -16,7 +16,7 @@ concurrency:
 jobs:
   release:
     name: goreleaser
-    runs-on: [self-hosted, self-hosted-hopnet-ci]
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
