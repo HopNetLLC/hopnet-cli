@@ -1,0 +1,30 @@
+name: smoke
+
+# Per-service smoke for hopnet-cli. Scope is "does the built binary
+# preserve the documented exit codes + config file mode?" — no Docker,
+# no network. Cross-service integration against a live control-api
+# stack is tracked in the planning-repo backlog.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: built-binary smoke
+    # Self-hosted runner — see ci.yml for the rollout rationale.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, self-hosted-hopnet-ci]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+      - name: Run smoke
+        run: bash tests/smoke.sh
