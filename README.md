@@ -1,6 +1,8 @@
 # hopnet CLI
 
-Single Go binary that drives HopNet from the developer's machine. Wraps the control API and includes the in-process local route bridge for browser sessions.
+Single Go binary that drives HopNet from the developer's machine.
+
+**New to HopNet?** Start with the [**Getting Started guide**](docs/getting-started.md) — zero to running real traffic in five minutes.
 
 The CLI is the customer-distributed artifact. The deployable system (control-api, admin-api, proxy-gateway, customer + admin web) lives in per-service sibling repos under `HopNetLLC/`. Strategy, architecture truth, and forward-looking design live in the planning repo at `~/projects/hopnet/`.
 
