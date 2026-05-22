@@ -80,6 +80,7 @@ func buildApp() *cli.App {
 			bridgeCmd(),
 			receiptCmd(),
 			billingCmd(),
+			completionCmd(),
 		},
 	}
 }
