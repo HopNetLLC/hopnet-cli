@@ -34,4 +34,10 @@ jobs:
           version: "~> v2"
           args: release --clean
         env:
+          # Default repo token — publishes the release on this repo.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # PAT scoped to HopNetLLC/homebrew-hopnet — pushes the formula
+          # to the tap repo. GoReleaser reads this automatically when a
+          # `brews:` block targets a different repo. Operator mints +
+          # rotates this via 1Password.
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}

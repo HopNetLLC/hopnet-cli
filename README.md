@@ -16,12 +16,17 @@ The CLI is the customer-distributed artifact. The deployable system (control-api
 ### Install
 
 ```bash
-# Linux + macOS — no sudo, installs to $HOME/.local/bin
+# Homebrew (macOS + Linux)
+brew install HopNetLLC/hopnet/hopnet
+```
+
+```bash
+# Or one-liner shell installer — no sudo, installs to $HOME/.local/bin
 curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | bash
 
 # Pin a specific version (recommended for CI to avoid the unauthenticated
 # 60/hr/IP GitHub releases API rate limit)
-curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | HOPNET_VERSION=v0.1.0 bash
+curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | HOPNET_VERSION=v0.1.1 bash
 
 # Custom install directory
 curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | HOPNET_INSTALL_DIR=/usr/local/bin bash
