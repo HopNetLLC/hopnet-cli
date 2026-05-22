@@ -1,0 +1,37 @@
+name: release
+
+# Cuts a GitHub release for any `v*` tag push. GoReleaser config lives at
+# .goreleaser.yaml — produces the linux/darwin × amd64/arm64 archive
+# matrix + checksums. No tag is cut automatically; the operator pushes
+# `git tag v0.1.0 && git push --tags` when ready.
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: goreleaser
+    runs-on: [self-hosted, self-hosted-hopnet-ci]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # GoReleaser computes the changelog from the commit range
+          # between the previous tag and HEAD; shallow clone breaks it.
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
