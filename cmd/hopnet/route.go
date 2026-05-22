@@ -255,7 +255,8 @@ func printUsage(w io.Writer, u *client.Usage) {
 		formatBytes(u.BytesClientToUpstream),
 		formatBytes(u.BytesUpstreamToClient),
 	)
-	fmt.Fprintf(w, "Cost    %s (estimated)\n", formatCents(u.EstimatedCostCents))
+	// u.EstimatedCostCents is unwritten on the server side; canonical cost
+	// lives in credit_ledger. Don't surface a misleading $0.00.
 	if u.ObservedAvgMbps != nil {
 		fmt.Fprintf(w, "Mbps    %.2f (observed avg)\n", *u.ObservedAvgMbps)
 	}
