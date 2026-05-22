@@ -149,6 +149,33 @@ for sub in topup balance history; do
     echo "FAIL: billing --help missing: $sub" >&2; exit 1; }
 done
 
+# ---------- Phase 7.5: doctor against the dead endpoint config ----------
+# The smoke config was created by Phase 2's auth login pointing at
+# 127.0.0.1:1/:2, so every network-touching doctor check must fail (and
+# the binary must exit 1) — except config + api-key, which inspect
+# local state and were valid. Use a tight timeout so the dial doesn't
+# stall the smoke run.
+echo "==> hopnet doctor against dead endpoint → exit 1, config+api-key ok"
+set +e
+"$HOPNET" doctor >"$TMP"/smoke-doctor.out 2>"$TMP"/smoke-doctor.err
+doctor_code=$?
+set -e
+[ "$doctor_code" -eq 1 ] || {
+  echo "FAIL: doctor exit $doctor_code, expected 1" >&2
+  cat "$TMP"/smoke-doctor.out >&2; exit 1; }
+grep -qE '^\[ok\][[:space:]]+config'  "$TMP"/smoke-doctor.out || {
+  echo "FAIL: doctor did not mark config ok" >&2
+  cat "$TMP"/smoke-doctor.out >&2; exit 1; }
+grep -qE '^\[ok\][[:space:]]+api-key' "$TMP"/smoke-doctor.out || {
+  echo "FAIL: doctor did not mark api-key ok" >&2
+  cat "$TMP"/smoke-doctor.out >&2; exit 1; }
+grep -qE '^\[fail\][[:space:]]+control-api' "$TMP"/smoke-doctor.out || {
+  echo "FAIL: doctor did not mark control-api fail against dead endpoint" >&2
+  cat "$TMP"/smoke-doctor.out >&2; exit 1; }
+grep -qE '^\[fail\][[:space:]]+proxy' "$TMP"/smoke-doctor.out || {
+  echo "FAIL: doctor did not mark proxy fail against dead endpoint" >&2
+  cat "$TMP"/smoke-doctor.out >&2; exit 1; }
+
 # ---------- Phase 8: completion subcommand emits hopnet-named scripts ----------
 echo "==> hopnet completion {bash,zsh,fish} emits non-empty hopnet-named scripts"
 for shell in bash zsh fish; do

@@ -81,6 +81,7 @@ func buildApp() *cli.App {
 			receiptCmd(),
 			billingCmd(),
 			completionCmd(),
+			doctorCmd(),
 		},
 	}
 }
