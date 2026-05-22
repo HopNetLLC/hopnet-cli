@@ -12,7 +12,9 @@ concurrency:
 jobs:
   go-check:
     name: Go vet + test
-    # Self-hosted runner. See HopNetLLC/hopnet-admin#7 for canary rationale.
+    # Same-repo gate: fork PRs are skipped so secrets aren't exposed to
+    # untrusted forks (forks are also disabled at the org level, so this
+    # is closed-by-default in practice).
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, self-hosted-hopnet-ci]
     steps:

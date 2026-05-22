@@ -1,8 +1,7 @@
-// Package client is a typed wrapper over the hopnet-alpha control-api.
+// Package client is a typed wrapper over the HopNet control API.
 //
-// Field naming and types here mirror the server's response shapes exactly
-// (see apps/control-api/src/api.ts in the hopnet-alpha repo). When the
-// server changes a field, this file changes; do not invent fields.
+// Field naming and types here mirror the server's wire shapes exactly.
+// When the server changes a field, this file changes; do not invent fields.
 package client
 
 import "time"
@@ -16,7 +15,7 @@ type Account struct {
 	AllowNegativeBalance bool   `json:"allow_negative_balance"`
 }
 
-// CreateRouteRequest mirrors apps/control-api/src/api.ts routeCreateSchema.
+// CreateRouteRequest mirrors the server's route-create schema.
 // Pointer fields are omitempty so unset values are not sent (the server
 // applies its own defaults).
 type CreateRouteRequest struct {
