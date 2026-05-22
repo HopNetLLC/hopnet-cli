@@ -26,13 +26,15 @@ Exits 0 if every check passes, 1 if any fails.`,
 }
 
 func doctorAction(c *cli.Context) error {
-	// loadCfg returns an error if the config file is malformed, but
-	// MISSING file is treated as a fresh zero Config. The doctor wants
-	// both: tolerate "no config yet" (so it can surface a clear error)
-	// AND surface parse errors.
-	cfg, _ := loadCfg(c)
-	// cfg may be nil if loadCfg failed; doctor.Run tolerates that.
-	results := doctor.Run(c.Context, doctor.Options{Config: cfg})
+	// loadCfg returns an error only if the config file is malformed
+	// (missing file is treated as a fresh zero Config). Pass the load
+	// error through to doctor so the config check can surface the
+	// actual parse failure instead of a generic "could not load".
+	cfg, loadErr := loadCfg(c)
+	results := doctor.Run(c.Context, doctor.Options{
+		Config:        cfg,
+		ConfigLoadErr: loadErr,
+	})
 
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	for _, r := range results {

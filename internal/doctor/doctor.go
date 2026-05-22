@@ -60,6 +60,11 @@ type DialFunc func(ctx context.Context, network, address string) (net.Conn, erro
 type Options struct {
 	Config *config.Config
 
+	// ConfigLoadErr surfaces the error from config.Load, if any, so the
+	// `config` check can show the underlying parse failure rather than a
+	// generic "could not load". Set to nil when load succeeded.
+	ConfigLoadErr error
+
 	// AccountClientFor constructs the API client for the control-api check.
 	// If nil, the default is client.New(cfg.BaseURL, cfg.APIKey).
 	AccountClientFor func(cfg *config.Config) AccountClient
@@ -93,7 +98,7 @@ func Run(ctx context.Context, opts Options) []Result {
 	var results []Result
 
 	// 1. config
-	results = append(results, checkConfig(cfg))
+	results = append(results, checkConfig(cfg, opts.ConfigLoadErr))
 
 	// 2. api-key (depends on the config check having loaded cfg; we accept
 	// a nil cfg in case of catastrophic loader failure)
@@ -120,7 +125,13 @@ func Run(ctx context.Context, opts Options) []Result {
 	return results
 }
 
-func checkConfig(cfg *config.Config) Result {
+func checkConfig(cfg *config.Config, loadErr error) Result {
+	if loadErr != nil {
+		// Surface the parse error verbatim — it tells the user which file
+		// + which JSON token is broken. loadErr is what the config
+		// package returned, which already strips secret values.
+		return Result{Name: "config", Status: StatusFail, Detail: fmt.Sprintf("load failed: %v", loadErr)}
+	}
 	if cfg == nil {
 		return Result{Name: "config", Status: StatusFail, Detail: "could not load config"}
 	}
@@ -205,6 +216,13 @@ func checkProxy(ctx context.Context, proxyURL string, dial DialFunc, timeout tim
 	}
 	host := u.Hostname()
 	port := u.Port()
+	if host == "" {
+		// Empty host with a port (`https://:443`) would build address
+		// `:443` which net.Dial treats as 0.0.0.0:443 — dialing the
+		// local machine instead of the configured proxy. Fail-fast so
+		// doctor doesn't false-positive on local listeners.
+		return Result{Name: "proxy", Status: StatusFail, Detail: "proxy_url has no host"}
+	}
 	if port == "" {
 		// Default 443 for https schemes (production proxy.hopnet.io:443
 		// always has an explicit port today, but be defensive).

@@ -209,6 +209,62 @@ func TestRun_ProxyMissingPort_HTTPSDefaults(t *testing.T) {
 	}
 }
 
+func TestRun_ProxyURLWithoutHost_FailsBeforeDial(t *testing.T) {
+	// Codex r2 P2: `https://:443` would build "JoinHostPort("", "443")"
+	// → ":443" which dials 0.0.0.0:443 (the local machine). Must
+	// fail-fast without invoking Dial.
+	cfg := happyConfig(t, "http://127.0.0.1:1", "https://:443")
+	dialCalled := false
+	results := Run(context.Background(), Options{
+		Config: cfg,
+		AccountClientFor: func(c *config.Config) AccountClient {
+			return errClient{err: errors.New("control-api down")}
+		},
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			dialCalled = true
+			return nil, errors.New("should not be called")
+		},
+	})
+	if dialCalled {
+		t.Fatal("proxy dial was attempted despite empty host")
+	}
+	for _, r := range results {
+		if r.Name == "proxy" {
+			if r.Status != StatusFail {
+				t.Errorf("expected proxy fail; got %s", r.Status)
+			}
+			if !strings.Contains(r.Detail, "no host") {
+				t.Errorf("expected detail to mention missing host; got %q", r.Detail)
+			}
+			return
+		}
+	}
+	t.Fatal("proxy result not found")
+}
+
+func TestRun_PassesLoadErrThroughToConfigCheck(t *testing.T) {
+	// Codex r2 P3: malformed config returns an error from loadCfg; the
+	// doctor's config check should surface that verbatim instead of the
+	// generic "could not load" fallback.
+	loadErr := errors.New("parse config /tmp/x: unexpected EOF at byte 42")
+	results := Run(context.Background(), Options{
+		Config:        nil, // unparseable file → cfg nil
+		ConfigLoadErr: loadErr,
+	})
+	for _, r := range results {
+		if r.Name == "config" {
+			if r.Status != StatusFail {
+				t.Errorf("expected config fail; got %s", r.Status)
+			}
+			if !strings.Contains(r.Detail, "unexpected EOF") {
+				t.Errorf("expected detail to surface load error verbatim; got %q", r.Detail)
+			}
+			return
+		}
+	}
+	t.Fatal("config result not found")
+}
+
 func TestFormatBalance(t *testing.T) {
 	cases := []struct {
 		cents int64
