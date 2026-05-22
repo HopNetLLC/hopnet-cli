@@ -13,25 +13,44 @@ The CLI is the customer-distributed artifact. The deployable system (control-api
 
 ## Quick Start
 
-```bash
-# Build
-go build -o ./bin/hopnet ./cmd/hopnet
+### Install
 
+```bash
+# Linux + macOS — no sudo, installs to $HOME/.local/bin
+curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | bash
+
+# Pin a specific version (recommended for CI to avoid the unauthenticated
+# 60/hr/IP GitHub releases API rate limit)
+curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | HOPNET_VERSION=v0.1.0 bash
+
+# Custom install directory
+curl -fsSL https://raw.githubusercontent.com/HopNetLLC/hopnet-cli/main/install.sh | HOPNET_INSTALL_DIR=/usr/local/bin bash
+```
+
+Or build from source:
+
+```bash
+go build -o ./bin/hopnet ./cmd/hopnet
+```
+
+### Use
+
+```bash
 # Authenticate against production (default base/proxy URLs)
-./bin/hopnet auth login --api-key hn_live_...
+hopnet auth login --api-key hn_live_...
 
 # Or stash via 1Password
-op read 'op://Private/HopNet API/key' | ./bin/hopnet auth login
+op read 'op://Private/HopNet API/key' | hopnet auth login
 
 # Create a route and run a command through it
-./bin/hopnet route create --ttl 5m --max-mb 50 --class direct --allow example.com
-./bin/hopnet run --ttl 5m --class direct --allow example.com -- curl https://example.com
+hopnet route create --ttl 5m --max-mb 50 --class direct --allow example.com
+hopnet run --ttl 5m --class direct --allow example.com -- curl https://example.com
 
 # List, inspect, revoke
-./bin/hopnet route list
-./bin/hopnet route usage rt_xxxxxxxx
-./bin/hopnet receipt rt_xxxxxxxx
-./bin/hopnet route delete rt_xxxxxxxx
+hopnet route list
+hopnet route usage rt_xxxxxxxx
+hopnet receipt rt_xxxxxxxx
+hopnet route delete rt_xxxxxxxx
 ```
 
 Default endpoints are production:
