@@ -100,7 +100,11 @@ Output is a single machine-readable line:
 rt_01jck3a5q7v8n0z8h0m1bm5x9w  rtk_4yk5x... 2026-05-22T15:05:00Z
 ```
 
-That's `<route-id> <route-token> <expires-at>`. Save it — the token is returned exactly once at creation; you can re-look-up the id afterward but not the token (the CLI caches it locally so `hopnet env` and `hopnet run --route` still work).
+That's `<route-id> <route-token> <expires-at>`. The CLI also caches the token to your local config (mode 0600) so `hopnet env <route-id>`, `hopnet run --route <route-id>`, and `hopnet route delete <route-id>` all keep working without you copying anything by hand.
+
+If you do need the token in a script that doesn't have access to the CLI's config — for example, embedding it in CI secrets — capture it from the `route create` output line at creation time. The server returns the token **exactly once over the wire**; if you delete the local config and didn't capture the token in some other way, the route still exists but you can't reuse its credentials from a different machine. You'd create a new route in that case.
+
+Treat `$XDG_CONFIG_HOME/hopnet/config.json` as sensitive — it holds your API key plus every active route token.
 
 ### Route flags
 
