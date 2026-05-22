@@ -33,6 +33,21 @@ Or build from source:
 go build -o ./bin/hopnet ./cmd/hopnet
 ```
 
+### Diagnostics
+
+```bash
+hopnet doctor
+```
+
+Runs four checks and exits non-zero on any failure:
+
+1. **config** — file at `$XDG_CONFIG_HOME/hopnet/config.json`, mode 0600
+2. **api-key** — present + format matches `hn_live_…`
+3. **control-api** — `GET <base_url>/v1/account` returns 200
+4. **proxy** — TCP dial to `<proxy_url>` succeeds within 3s
+
+Useful when a `route create` or `run` is failing and you want to know whether it's auth, network, or local config.
+
 ### Shell completion
 
 ```bash
