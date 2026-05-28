@@ -23,6 +23,7 @@ func routeCmd() *cli.Command {
 			routeCreateCmd(),
 			routeListCmd(),
 			routeUsageCmd(),
+			routeConnectsCmd(),
 			routeDeleteCmd(),
 		},
 	}
@@ -181,6 +182,79 @@ func routeUsageAction(c *cli.Context) error {
 	}
 	printUsage(os.Stdout, u)
 	return nil
+}
+
+// routeConnectsCmd is the M3.5 per-CONNECT log viewer. Thin wrapper over
+// GET /v1/routes/:id/connects with cursor pagination via --before.
+func routeConnectsCmd() *cli.Command {
+	return &cli.Command{
+		Name:      "connects",
+		Usage:     "Show per-CONNECT sticky-directive log for a route (M3.5)",
+		ArgsUsage: "<route-id>",
+		Flags: []cli.Flag{
+			&cli.IntFlag{Name: "limit", Usage: "Max rows to fetch (1..500)", Value: 50},
+			&cli.Int64Flag{Name: "before", Usage: "Cursor: fetch rows older than this id"},
+		},
+		Action: routeConnectsAction,
+	}
+}
+
+func routeConnectsAction(c *cli.Context) error {
+	if c.NArg() != 1 {
+		return fmt.Errorf("connects requires exactly one argument: <route-id>")
+	}
+	id := c.Args().Get(0)
+	cfg, err := loadCfg(c)
+	if err != nil {
+		return err
+	}
+	api, err := newClientForCfg(cfg)
+	if err != nil {
+		return err
+	}
+	r, err := api.GetConnects(c.Context, id, c.Int64("before"), c.Int("limit"))
+	if err != nil {
+		return err
+	}
+	printConnects(os.Stdout, r)
+	return nil
+}
+
+// printConnects renders a route_connect_log page as a tab-aligned table.
+func printConnects(w io.Writer, r *client.RouteConnects) {
+	fmt.Fprintf(w, "Route   %s\n", r.RouteID)
+	fmt.Fprintf(w, "Showing %d connect(s)\n", len(r.Connects))
+	if len(r.Connects) == 0 {
+		return
+	}
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "TIME\tDIRECTIVE\tSOURCE\tSESSION_HASH\tPOOL\tSTATUS")
+	for _, e := range r.Connects {
+		source := "-"
+		if e.Source != nil {
+			source = *e.Source
+		}
+		pool := "-"
+		if e.UpstreamPoolName != nil {
+			pool = *e.UpstreamPoolName
+		}
+		sessionHash := e.SessionIDHash
+		if sessionHash == "" {
+			sessionHash = "-"
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			e.ConnectedAt.Format(time.RFC3339),
+			e.Directive,
+			source,
+			sessionHash,
+			pool,
+			e.PerConnectStatus,
+		)
+	}
+	_ = tw.Flush()
+	if r.NextBefore != nil {
+		fmt.Fprintf(w, "\nNext page: --before %d\n", *r.NextBefore)
+	}
 }
 
 func routeDeleteCmd() *cli.Command {

@@ -29,7 +29,7 @@ func TestCommandTreeMatchesSpec(t *testing.T) {
 	route := findCmd(t, app.Commands, "route")
 	routeSubs := commandNames(route.Subcommands)
 	sort.Strings(routeSubs)
-	require.Equal(t, []string{"create", "delete", "list", "usage"}, routeSubs)
+	require.Equal(t, []string{"connects", "create", "delete", "list", "usage"}, routeSubs)
 
 	billing := findCmd(t, app.Commands, "billing")
 	billingSubs := commandNames(billing.Subcommands)

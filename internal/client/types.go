@@ -116,8 +116,37 @@ type Usage struct {
 	// P20: sticky resolution status. Omitted on direct-class routes
 	// and on fresh routes before the selector has picked an upstream.
 	// Values: honored / requested_partial / requested_not_supported /
-	// not_requested.
+	// not_requested / mixed (M3.5).
 	StickyStatus string `json:"sticky_status,omitempty"`
+}
+
+// RouteConnectLogEntry is one row from GET /v1/routes/:id/connects.
+// Added in M3.5 (per-connect-sticky). Matches the @hopnetllc/schema
+// v0.9.0 RouteConnectLogEntry shape.
+//
+// SessionIDHash is the vendor-visible 8-char derived id (NOT the
+// customer-supplied opaque). Empty when directive=request_rotate or
+// when sticky was requested-but-not-supported.
+//
+// UpstreamPoolName mirrors the receipt's anti-positioning rule: null
+// when the picked endpoint has no customer_pool_name (internal-only).
+type RouteConnectLogEntry struct {
+	ID               int64     `json:"id"`
+	ConnectedAt      time.Time `json:"connected_at"`
+	Directive        string    `json:"directive"`
+	Source           *string   `json:"source"`
+	SessionIDHash    string    `json:"session_id_hash"`
+	UpstreamPoolName *string   `json:"upstream_pool_name"`
+	PerConnectStatus string    `json:"per_connect_status"`
+}
+
+// RouteConnects is GET /v1/routes/:id/connects. Cursor-paginated by
+// BIGSERIAL id descending. NextBefore is the id to pass as ?before=
+// for the next page; nil when no more rows.
+type RouteConnects struct {
+	RouteID    string                 `json:"route_id"`
+	Connects   []RouteConnectLogEntry `json:"connects"`
+	NextBefore *int64                 `json:"next_before"`
 }
 
 // errorBody is the shape the server uses for non-2xx responses. Not all
