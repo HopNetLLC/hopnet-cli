@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -115,6 +116,30 @@ func (c *Client) GetUsage(ctx context.Context, id string) (*Usage, error) {
 // missing-id and already-terminal).
 func (c *Client) DeleteRoute(ctx context.Context, id string) error {
 	return c.do(ctx, http.MethodDelete, "/v1/routes/"+id, nil, nil)
+}
+
+// GetConnects is GET /v1/routes/:id/connects. Cursor-paginated by
+// BIGSERIAL id descending. before==0 means no cursor (first page);
+// limit==0 lets the server choose its default (100).
+func (c *Client) GetConnects(ctx context.Context, id string, before int64, limit int) (*RouteConnects, error) {
+	path := "/v1/routes/" + id + "/connects"
+	q := ""
+	if limit > 0 {
+		q = "?limit=" + strconv.Itoa(limit)
+	}
+	if before > 0 {
+		if q == "" {
+			q = "?"
+		} else {
+			q += "&"
+		}
+		q += "before=" + strconv.FormatInt(before, 10)
+	}
+	var out RouteConnects
+	if err := c.do(ctx, http.MethodGet, path+q, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 // do is the single HTTP entry point. It marshals body (if non-nil), adds
