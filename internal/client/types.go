@@ -30,6 +30,10 @@ type CreateRouteRequest struct {
 	Deny             []string `json:"deny,omitempty"`
 	ClientKind       string   `json:"client_kind"`
 	TemplateName     string   `json:"template_name,omitempty"`
+	// P20: sticky session opt-out. Pointer so the zero value (sticky
+	// disabled) doesn't get accidentally serialized when the CLI didn't
+	// set it explicitly — server defaults to sticky=true.
+	Sticky *bool `json:"sticky,omitempty"`
 }
 
 // CreateRouteResponse is the 201 body from POST /v1/routes. Token is
@@ -82,6 +86,17 @@ type Destination struct {
 	Bytes   int64  `json:"bytes"`
 }
 
+// Pool is one entry in the P20 per-pool attribution breakdown of a
+// usage response. Tunnels is optional (schema v0.7.1) — proxy-gateway
+// doesn't yet emit per-tunnel attribution to upstream, so the field is
+// omitted until that post-M3 enhancement lands.
+type Pool struct {
+	Name     string `json:"name"`
+	BytesIn  int64  `json:"bytes_in"`
+	BytesOut int64  `json:"bytes_out"`
+	Tunnels  *int   `json:"tunnels,omitempty"`
+}
+
 // Usage is GET /v1/routes/:id/usage. Bytes is the sum of the c2u + u2c
 // columns; both directions are also exposed individually.
 type Usage struct {
@@ -96,6 +111,13 @@ type Usage struct {
 	CreatedAt             time.Time     `json:"created_at"`
 	ExpiresAt             *time.Time    `json:"expires_at"`
 	Destinations          []Destination `json:"destinations"`
+	// P20: per-pool attribution. Empty array for direct-class routes.
+	Pools []Pool `json:"pools,omitempty"`
+	// P20: sticky resolution status. Omitted on direct-class routes
+	// and on fresh routes before the selector has picked an upstream.
+	// Values: honored / requested_partial / requested_not_supported /
+	// not_requested.
+	StickyStatus string `json:"sticky_status,omitempty"`
 }
 
 // errorBody is the shape the server uses for non-2xx responses. Not all

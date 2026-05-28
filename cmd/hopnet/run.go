@@ -25,12 +25,13 @@ caller-owned and never auto-revoked).`,
 			&cli.StringFlag{Name: "route", Usage: "Reuse an existing route id (must be in local cache)"},
 			&cli.DurationFlag{Name: "ttl", Usage: "Route TTL when creating ad-hoc", Value: 15 * time.Minute},
 			&cli.IntFlag{Name: "max-mb", Usage: "Byte cap (MB) when creating ad-hoc"},
-			&cli.StringFlag{Name: "class", Usage: "Route class when creating ad-hoc", Value: "direct"},
+			&cli.StringFlag{Name: "class", Usage: "Route class when creating ad-hoc (free|direct|datacenter|residential|fast|auto|mobile|isp)", Value: "direct"},
 			&cli.StringFlag{Name: "country", Usage: "Country code when creating ad-hoc"},
 			&cli.StringSliceFlag{Name: "allow", Usage: "Allow host (repeatable)"},
 			&cli.StringSliceFlag{Name: "deny", Usage: "Deny host (repeatable)"},
 			&cli.StringFlag{Name: "label", Usage: "Route label", Value: "hopnet-run"},
 			&cli.BoolFlag{Name: "keep-route", Usage: "Do not revoke a self-created route after exit"},
+			&cli.BoolFlag{Name: "sticky", Usage: "Request sticky session for the ad-hoc route (default true)", Value: true},
 		},
 		Action: runAction,
 	}
@@ -74,6 +75,10 @@ func runAction(c *cli.Context) error {
 		if c.IsSet("max-mb") {
 			v := c.Int("max-mb")
 			req.MaxMB = &v
+		}
+		if c.IsSet("sticky") {
+			v := c.Bool("sticky")
+			req.Sticky = &v
 		}
 		opts.CreateRequest = req
 	}

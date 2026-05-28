@@ -37,7 +37,7 @@ func routeCreateCmd() *cli.Command {
 			&cli.DurationFlag{Name: "ttl", Usage: "Route TTL (e.g. 15m, 1h)", Value: 15 * time.Minute},
 			&cli.IntFlag{Name: "max-mb", Usage: "Byte cap (MB)"},
 			&cli.Int64Flag{Name: "max-cost-cents", Usage: "Cost cap (cents)"},
-			&cli.StringFlag{Name: "class", Usage: "Route class (free|direct|datacenter|residential|fast|auto)", Value: "direct"},
+			&cli.StringFlag{Name: "class", Usage: "Route class (free|direct|datacenter|residential|fast|auto|mobile|isp)", Value: "direct"},
 			&cli.StringFlag{Name: "country", Usage: "ISO-3166 country code"},
 			&cli.IntFlag{Name: "min-mbps", Usage: "Requested minimum throughput (Mbps)"},
 			&cli.StringSliceFlag{Name: "allow", Usage: "Hostname allowlist (repeatable)"},
@@ -45,6 +45,7 @@ func routeCreateCmd() *cli.Command {
 			&cli.StringFlag{Name: "label", Usage: "Free-form label"},
 			&cli.StringFlag{Name: "client-kind", Usage: "Client identity (cli|browser|playwright|ci|mcp|api)", Value: "cli"},
 			&cli.StringFlag{Name: "template", Usage: "Template name (if using a template)"},
+			&cli.BoolFlag{Name: "sticky", Usage: "Request sticky session (best-effort; default true)", Value: true},
 		},
 		Action: routeCreateAction,
 	}
@@ -90,6 +91,10 @@ func routeCreateAction(c *cli.Context) error {
 	}
 	if t := c.String("template"); t != "" {
 		req.TemplateName = t
+	}
+	if c.IsSet("sticky") {
+		v := c.Bool("sticky")
+		req.Sticky = &v
 	}
 
 	resp, err := api.CreateRoute(c.Context, req)
@@ -267,6 +272,31 @@ func printUsage(w io.Writer, u *client.Usage) {
 			fmt.Fprintf(tw, "  %s:%d\t%d tunnels\t%s\n", d.Host, d.Port, d.Tunnels, formatBytes(d.Bytes))
 		}
 		_ = tw.Flush()
+	}
+	// P20: per-pool attribution + sticky status. Pools is empty for
+	// direct-class routes; sticky_status is omitted on direct + pending
+	// (fresh route, selector hasn't picked yet). Server-side anti-
+	// positioning preserved — the rendered name is the anonymized
+	// customer_pool_name, never the internal/vendor identifier.
+	if len(u.Pools) > 0 {
+		fmt.Fprintln(w, "Pools")
+		tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+		for _, p := range u.Pools {
+			tunnelsLabel := ""
+			if p.Tunnels != nil && *p.Tunnels > 0 {
+				tunnelsLabel = fmt.Sprintf("\t%d tunnels", *p.Tunnels)
+			}
+			fmt.Fprintf(tw, "  %s\tin %s\tout %s%s\n",
+				p.Name,
+				formatBytes(p.BytesIn),
+				formatBytes(p.BytesOut),
+				tunnelsLabel,
+			)
+		}
+		_ = tw.Flush()
+	}
+	if u.StickyStatus != "" {
+		fmt.Fprintf(w, "Sticky  %s\n", u.StickyStatus)
 	}
 }
 
