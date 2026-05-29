@@ -16,6 +16,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/HopNetLLC/hopnet-cli/internal/client"
 )
 
 // DefaultBaseURL points at the production control-api. Override via
@@ -72,7 +74,15 @@ func (c *Client) ListPools(ctx context.Context) (*PoolsResponse, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("GET /v1/pools returned status %d", resp.StatusCode)
+		// Codex r1 P2: preserve the CLI exit-code contract by wrapping
+		// the authenticated client's sentinels so mapErrorToExitCode
+		// surfaces exitServer (5) on 5xx and exitGeneric (1) on the
+		// 4xx fall-through. /v1/pools is anonymous so ErrUnauthorized
+		// (which would map to exitAuth) is not expected here.
+		if resp.StatusCode >= 500 {
+			return nil, fmt.Errorf("GET /v1/pools returned status %d: %w", resp.StatusCode, client.ErrServer)
+		}
+		return nil, fmt.Errorf("GET /v1/pools returned status %d: %w", resp.StatusCode, client.ErrBadRequest)
 	}
 	var out PoolsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {

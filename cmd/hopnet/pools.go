@@ -66,9 +66,35 @@ func poolsListAction(c *cli.Context) error {
 		return err
 	}
 
-	// Filter by --country FIRST (before --class) so the country filter
-	// can prune classes that don't cover the country. Country normalized
-	// to uppercase to match the wire format.
+	// Codex r1 P3 fix: validate --class existence against the UNFILTERED
+	// response BEFORE applying --country. Otherwise a valid class with
+	// no coverage for the requested country (e.g. `--class datacenter
+	// --country DE` when datacenter is US-only) would surface as
+	// "no pool found for --class datacenter" — misleading: the class
+	// exists, it just doesn't cover that country.
+	if class := strings.TrimSpace(c.String("class")); class != "" {
+		classExists := false
+		for _, p := range resp.Pools {
+			if p.RouteClass == class {
+				classExists = true
+				break
+			}
+		}
+		if !classExists {
+			return fmt.Errorf("no pool found for --class %q", class)
+		}
+		filtered := make([]poolsclient.PoolEntry, 0, 1)
+		for _, p := range resp.Pools {
+			if p.RouteClass == class {
+				filtered = append(filtered, p)
+			}
+		}
+		resp.Pools = filtered
+	}
+
+	// Country filter runs AFTER class so an unmatched (class, country)
+	// pair renders as a discovery-style empty result instead of an
+	// error. Country normalized to uppercase to match the wire format.
 	if country := strings.ToUpper(strings.TrimSpace(c.String("country"))); country != "" {
 		filtered := make([]poolsclient.PoolEntry, 0, len(resp.Pools))
 		for _, p := range resp.Pools {
@@ -77,19 +103,6 @@ func poolsListAction(c *cli.Context) error {
 			}
 		}
 		resp.Pools = filtered
-	}
-
-	if class := strings.TrimSpace(c.String("class")); class != "" {
-		filtered := make([]poolsclient.PoolEntry, 0, 1)
-		for _, p := range resp.Pools {
-			if p.RouteClass == class {
-				filtered = append(filtered, p)
-			}
-		}
-		resp.Pools = filtered
-		if len(resp.Pools) == 0 {
-			return fmt.Errorf("no pool found for --class %q", class)
-		}
 	}
 
 	if c.Bool("json") {

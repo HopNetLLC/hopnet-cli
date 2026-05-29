@@ -3,10 +3,13 @@ package poolsclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/HopNetLLC/hopnet-cli/internal/client"
 )
 
 func TestNew_HonorsEnvOverride(t *testing.T) {
@@ -63,13 +66,34 @@ func TestListPools_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestListPools_PropagatesNon2xx(t *testing.T) {
+func TestListPools_5xxWrapsServerSentinel(t *testing.T) {
+	// Codex r1 P2: 5xx must surface as ErrServer so the CLI maps to
+	// exit code 5 (server) instead of 1 (generic).
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusInternalServerError)
 	}))
 	defer srv.Close()
 	c := &Client{BaseURL: srv.URL, HTTP: srv.Client()}
-	if _, err := c.ListPools(context.Background()); err == nil {
-		t.Error("expected error on 500")
+	_, err := c.ListPools(context.Background())
+	if err == nil {
+		t.Fatal("expected error on 500")
+	}
+	if !errors.Is(err, client.ErrServer) {
+		t.Errorf("expected ErrServer in error chain; got %v", err)
+	}
+}
+
+func TestListPools_4xxWrapsBadRequestSentinel(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "rate limited", http.StatusTooManyRequests)
+	}))
+	defer srv.Close()
+	c := &Client{BaseURL: srv.URL, HTTP: srv.Client()}
+	_, err := c.ListPools(context.Background())
+	if err == nil {
+		t.Fatal("expected error on 429")
+	}
+	if !errors.Is(err, client.ErrBadRequest) {
+		t.Errorf("expected ErrBadRequest in error chain; got %v", err)
 	}
 }
