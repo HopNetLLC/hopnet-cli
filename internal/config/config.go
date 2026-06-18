@@ -57,7 +57,6 @@ type Route struct {
 	RouteClass   string    `json:"route_class"`
 	Country      string    `json:"country,omitempty"`
 	MaxBytes     *int64    `json:"max_bytes,omitempty"`
-	MaxCostCents *int64    `json:"max_cost_cents,omitempty"`
 	RouteVersion int       `json:"route_version"`
 }
 

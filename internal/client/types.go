@@ -22,7 +22,6 @@ type CreateRouteRequest struct {
 	Label            string   `json:"label,omitempty"`
 	TTLSeconds       int      `json:"ttl_seconds"`
 	MaxMB            *int     `json:"max_mb,omitempty"`
-	MaxCostCents     *int64   `json:"max_cost_cents,omitempty"`
 	RouteClass       string   `json:"route_class"`
 	Country          string   `json:"country,omitempty"`
 	RequestedMinMbps *int     `json:"requested_min_mbps,omitempty"`
@@ -45,7 +44,6 @@ type CreateRouteResponse struct {
 	Country      string    `json:"country,omitempty"`
 	ExpiresAt    time.Time `json:"expires_at"`
 	MaxBytes     *int64    `json:"max_bytes"`
-	MaxCostCents *int64    `json:"max_cost_cents"`
 	RouteVersion int       `json:"route_version"`
 }
 
@@ -63,7 +61,6 @@ type Route struct {
 	AllowHosts         any        `json:"allow_hosts"`
 	DenyHosts          any        `json:"deny_hosts"`
 	MaxBytes           *int64     `json:"max_bytes"`
-	MaxCostCents       *int64     `json:"max_cost_cents"`
 	RouteVersion       int        `json:"route_version"`
 	ClientKind         string     `json:"client_kind"`
 	TemplateName       string     `json:"template_name"`
