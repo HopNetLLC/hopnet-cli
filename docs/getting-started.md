@@ -104,13 +104,12 @@ Treat `$XDG_CONFIG_HOME/hopnet/config.json` as sensitive — it holds your API k
 
 ### Route flags
 
-No flag is strictly required — `hopnet route create` with no arguments produces a 15-minute `direct`-class route with no byte/cost cap and no destination filter.
+No flag is strictly required — `hopnet route create` with no arguments produces a 15-minute `direct`-class route with no byte cap and no destination filter.
 
 | Flag | Default | Required | What it does |
 |---|---|---|---|
 | `--ttl 15m` | `15m` | no | How long the route lives (max 24h) |
 | `--max-mb 100` | _(no cap)_ | no | Hard byte cap; route auto-terminates when hit (max 100 GB) |
-| `--max-cost-cents 50` | _(no cap)_ | no | Hard cost cap, in cents |
 | `--class direct` | `direct` | no | Route class: `direct`, `datacenter`, `residential`, `free`, `fast`, `auto` |
 | `--country US` | _(any)_ | no | ISO-3166 country code (depends on the class supporting it) |
 | `--min-mbps 5` | _(unrestricted)_ | no | Requested minimum throughput |

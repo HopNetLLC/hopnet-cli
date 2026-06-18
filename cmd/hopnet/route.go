@@ -37,7 +37,6 @@ func routeCreateCmd() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.DurationFlag{Name: "ttl", Usage: "Route TTL (e.g. 15m, 1h)", Value: 15 * time.Minute},
 			&cli.IntFlag{Name: "max-mb", Usage: "Byte cap (MB)"},
-			&cli.Int64Flag{Name: "max-cost-cents", Usage: "Cost cap (cents)"},
 			&cli.StringFlag{Name: "class", Usage: "Route class (free|direct|datacenter|residential|fast|auto|mobile|isp)", Value: "direct"},
 			&cli.StringFlag{Name: "country", Usage: "ISO-3166 country code"},
 			&cli.IntFlag{Name: "min-mbps", Usage: "Requested minimum throughput (Mbps)"},
@@ -82,10 +81,6 @@ func routeCreateAction(c *cli.Context) error {
 		v := c.Int("max-mb")
 		req.MaxMB = &v
 	}
-	if c.IsSet("max-cost-cents") {
-		v := c.Int64("max-cost-cents")
-		req.MaxCostCents = &v
-	}
 	if c.IsSet("min-mbps") {
 		v := c.Int("min-mbps")
 		req.RequestedMinMbps = &v
@@ -110,7 +105,6 @@ func routeCreateAction(c *cli.Context) error {
 		RouteClass:   resp.RouteClass,
 		Country:      resp.Country,
 		MaxBytes:     resp.MaxBytes,
-		MaxCostCents: resp.MaxCostCents,
 		RouteVersion: resp.RouteVersion,
 	})
 	if err := cfg.Save(); err != nil {

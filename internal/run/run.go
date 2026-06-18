@@ -167,7 +167,6 @@ func Run(ctx context.Context, c *client.Client, cfg *config.Config, opts Options
 			RouteClass:   created.RouteClass,
 			Country:      created.Country,
 			MaxBytes:     created.MaxBytes,
-			MaxCostCents: created.MaxCostCents,
 			RouteVersion: created.RouteVersion,
 		})
 		if err := cfg.Save(); err != nil {
